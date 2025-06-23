@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Consulta de relatório">
+    <title>Consulta Relatório</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        main {
+            flex: 1;
+        }
+
+        header, footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .loader {
+            border: 8px solid #f3f3f3; /* Light gray */
+            border-top: 8px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: auto;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            display: none; /* Inicialmente oculto */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header class="bg-dark text-white">
+        <h1 id="cabecalho"></h1>
+    </header>
+    
+    <main class="container mt-4">
+        <div id="loader" class="loader"></div>
+
+        <article id="content">
+            <p class="text-center small text-muted fst-italic">Este relatório apresenta a quantidade de consultas por deusa, a soma e a média de consultas por deusa.</p>
+
+            <div class="row align-items-center mt-5">
+                <div class="col-md-6">
+                    <section>
+                        <div id="chartContainer"></div> <!-- Adicione esta linha -->
+                    </section>
+                </div>
+                <div class="col-md-6">
+                    <section>
+                        <table id="minhaTabela" class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Deusas</th>
+                                    <th>Quantidade</th>
+                                    <th>Soma</th>
+                                    <th>Média</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Afrodite</td>
+                                    <td><span id="qtd_afrodite"></span></td>
+                                    <td><span id="soma_afrodite"></span></td>
+                                    <td><span id="media_afrodite"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Artemis</td>
+                                    <td><span id="qtd_artemis"></span></td>
+                                    <td><span id="soma_artemis"></span></td>
+                                    <td><span id="media_artemis"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Atena</td>
+                                    <td><span id="qtd_atena"></span></td>
+                                    <td><span id="soma_atena"></span></td>
+                                    <td><span id="media_atena"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Demeter</td>
+                                    <td><span id="qtd_demeter"></span></td>
+                                    <td><span id="soma_demeter"></span></td>
+                                    <td><span id="media_demeter"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Hera</td>
+                                    <td><span id="qtd_hera"></span></td>
+                                    <td><span id="soma_hera"></span></td>
+                                    <td><span id="media_hera"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Persofone</td>
+                                    <td><span id="qtd_persofone"></span></td>
+                                    <td><span id="soma_persofone"></span></td>
+                                    <td><span id="media_persofone"></span></td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="4" class="text-center"> Total de registros: <span id="totalConsultas"></span></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </section>
+                </div>
+            </div>
+        
+        </article>
+        
+    </main>
+
+    <footer class="bg-dark text-white">
+        <p id="rodape"></p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+    <script type="text/javascript"  >
+
+        // Executar a consulta ao carregar a página
+        $(document).ready(async function() {
+
+            // Mostrar indicador de carregamento
+            const loader = document.getElementById('loader');
+            const content = document.getElementById('content');
+            loader.style.display = 'block';
+            content.style.display = 'none';
+
+            try {
+                const response = await fetch('relatorio.php');
+                const data = await response.json();
+                await exibirResultado(data);
+
+            } catch (error) {
+                console.error('Erro na consulta:', error);
+            }
+
+            $('#cabecalho').text('Relatório Sintético');
+
+            $('#rodape').html('&#169; ' + new  Date().getFullYear() + ' &#8482; Musa da Mente &#174;');
+
+            $('#minhaTabela').DataTable({
+                info: false,
+                ordering: true,
+                paging: false,
+                searching: false,
+                order: [[1, 'desc']]
+            });
+            
+            loader.style.display = 'none';
+            content.style.display = 'block';
+
+        });
+
+        function exibirResultado(data) {
+            
+            google.charts.load('current', {'packages':['corechart']});
+            
+            if (typeof google.charts !== 'undefined' ) {
+
+                // Montar os dados para o gráfico de pizza
+                const chartData = [['Deusa', 'Quantidade']];
+
+                Object.entries(data.quantidade).forEach(deusa => {
+                    deusa[0]=deusa[0].replace("qtd_", "").trim().toUpperCase();
+                    deusa[1]= parseFloat(deusa[1]);
+                    chartData.push(deusa);
+                });
+
+                google.charts.setOnLoadCallback(function(){ drawChart(chartData) });
+            } else {
+                console.error('Erro: Biblioteca Google Charts não está carregada.');
+            }
+
+            /* Atualizar os valores de soma e média*/
+
+            // Afrodite
+            const qtdAfroditeSpan = document.getElementById('qtd_afrodite');
+            qtdAfroditeSpan.textContent = parseInt(data.quantidade.qtd_afrodite) || 0;
+
+            const somaAfroditeSpan = document.getElementById('soma_afrodite');
+            somaAfroditeSpan.textContent = parseInt(data.soma.soma_afrodite) || 0;
+
+            const mediaAfroditeSpan = document.getElementById('media_afrodite');
+            mediaAfroditeSpan.textContent = parseFloat(data.media.media_afrodite.toFixed(2)) || 0;
+
+            // Artemis
+            const qtdArtemisSpan = document.getElementById('qtd_artemis');
+            qtdArtemisSpan.textContent = parseInt(data.quantidade.qtd_artemis) || 0;
+
+            const somaArtemisSpan = document.getElementById('soma_artemis');
+            somaArtemisSpan.textContent = parseInt(data.soma.soma_artemis) || 0;
+
+            const mediaArtemisSpan = document.getElementById('media_artemis');
+            mediaArtemisSpan.textContent = parseFloat(data.media.media_artemis.toFixed(2)) || 0;
+
+            // Atena
+            const qtdAtenaSpan = document.getElementById('qtd_atena');
+            qtdAtenaSpan.textContent = parseInt(data.quantidade.qtd_atena) || 0;
+
+            const somaAtenaSpan = document.getElementById('soma_atena');
+            somaAtenaSpan.textContent = parseInt(data.soma.soma_atena) || 0;
+
+            const mediaAtenaSpan = document.getElementById('media_atena');
+            mediaAtenaSpan.textContent = parseFloat(data.media.media_atena.toFixed(2)) || 0;
+
+            // Demeter
+            const qtdDemeterSpan = document.getElementById('qtd_demeter');
+            qtdDemeterSpan.textContent = parseInt(data.quantidade.qtd_demeter) || 0;
+
+            const somaDemeterSpan = document.getElementById('soma_demeter');
+            somaDemeterSpan.textContent = parseInt(data.soma.soma_demeter) || 0;
+
+            const mediaDemeterSpan = document.getElementById('media_demeter');
+            mediaDemeterSpan.textContent = parseFloat(data.media.media_demeter.toFixed(2))|| 0;
+
+            // Hera
+            const qtdHeraSpan = document.getElementById('qtd_hera');
+            qtdHeraSpan.textContent = parseInt(data.quantidade.qtd_hera) || 0;
+
+            const somaHeraSpan = document.getElementById('soma_hera');
+            somaHeraSpan.textContent = parseFloat(data.soma.soma_hera.toFixed(2)) || 0;
+
+            const mediaHeraSpan = document.getElementById('media_hera');
+            mediaHeraSpan.textContent = parseInt(data.media.media_hera) || 0;
+
+            // Persofone
+            const qtdPersofoneSpan = document.getElementById('qtd_persofone');
+            qtdPersofoneSpan.textContent = parseInt(data.quantidade.qtd_persefone) || 0;
+
+            const somaPersofoneSpan = document.getElementById('soma_persofone');
+            somaPersofoneSpan.textContent = parseInt(data.soma.soma_persefone) || 0;
+
+            const mediaPersofoneSpan = document.getElementById('media_persofone');
+            mediaPersofoneSpan.textContent = parseFloat(data.media.media_persefone.toFixed(2)) || 0;
+
+            // Atualizar o total de registros
+            const totalConsultasSpan = document.getElementById('totalConsultas');
+            totalConsultasSpan.textContent = parseInt(data.total_registros) || 0;
+
+        }
+
+        function drawChart(dt) {
+
+            // Calcular a largura e altura da tela
+            const larguraTela = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+            const alturaTela = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+
+            // Definir porcentagens desejadas para a largura e altura do gráfico
+            const porcentagemLargura = 48; // Porcentagem da largura da tela
+            const porcentagemAltura = 48; // Porcentagem da altura da tela
+
+            // Calcular as dimensões do gráfico com base nas porcentagens
+            const larguraGrafico = (porcentagemLargura / 100) * larguraTela;
+            const alturaGrafico = (porcentagemAltura / 100) * alturaTela;
+
+            // Ajustar a margem do gráfico (adapte conforme necessário)
+            const margemGrafico = { top: 10, right: 10, bottom: 10, left: 10 };
+
+            var data = google.visualization.arrayToDataTable(dt);
+
+            var options = {
+                        title: 'Estatistica por Deusa',
+                        pieHole: 0.4,
+                        pieStartAngle: 100,
+                        width: larguraGrafico - margemGrafico.left - margemGrafico.right,
+                        height: alturaGrafico - margemGrafico.top - margemGrafico.bottom,
+                        chartArea: { left: margemGrafico.left, top: margemGrafico.top, width: '80%', height: '80%' }
+                        };
+
+                var chart = new google.visualization.PieChart(document.getElementById('chartContainer'));
+
+            chart.draw(data, options);
+        }
+    </script>
+</body>
+</html>
